@@ -590,7 +590,8 @@ struct SourcePanel: View {
                 isDragging: $isDragging,
                 showError: $showError,
                 errorMessage: $errorMessage,
-                selectedFormat: selectedFormat
+                selectedFormat: selectedFormat,
+                hasFiles: !files.isEmpty
             ) { urls in
                 if urls.isEmpty {
                     onClearAll()
