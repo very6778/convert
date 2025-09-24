@@ -15,7 +15,6 @@ struct DropZoneView: View {
     let onFilesSelected: ([URL]) -> Void
     
     private let dropDelegate: FileDropDelegate
-    @Environment(\.colorScheme) private var colorScheme
     
     init(isDragging: Binding<Bool>, showError: Binding<Bool>, errorMessage: Binding<String?>, selectedFormat: UTType, onFilesSelected: @escaping ([URL]) -> Void) {
         self._isDragging = isDragging
@@ -65,17 +64,24 @@ struct DropZoneView: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(zoneBackground)
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(
-                    strokeGradient,
-                    style: StrokeStyle(
-                        lineWidth: isDragging || showError ? 2.2 : 1.4,
-                        dash: showError ? [] : [10, 6]
-                    )
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.4))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: showError ? 
+                                    [.red.opacity(0.3), .red.opacity(0.2)] :
+                                    isDragging ? 
+                                        [.accentColor.opacity(0.3), .accentColor.opacity(0.2)] :
+                                        [.secondary.opacity(0.1), .secondary.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: isDragging || showError ? 2 : 1
+                        )
                 )
-
+            
             VStack(spacing: 16) {
                 // Drop zone content
                 DropZoneContent(
@@ -99,33 +105,14 @@ struct DropZoneView: View {
                     }
                 )
             }
-            .padding(28)
+            .padding(40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture(perform: selectFiles)
         .onDrop(of: [.fileURL], delegate: dropDelegate)
     }
-
-    private var zoneBackground: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.03)
-        } else {
-            return Color.white.opacity(0.75)
-        }
-    }
-
-    private var strokeGradient: LinearGradient {
-        if showError {
-            return LinearGradient(colors: [.red.opacity(0.6), .red.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-        if isDragging {
-            return LinearGradient(colors: [.accentColor.opacity(0.7), .accentColor.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-        let neutral = colorScheme == .dark ? Color.white.opacity(0.3) : Color.secondary.opacity(0.35)
-        return LinearGradient(colors: [neutral, neutral.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
+    
     private func selectFiles() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true

@@ -10,8 +10,7 @@ struct FormatSelectorView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        HStack(spacing: 16) {
-            Spacer(minLength: 0)
+        HStack(spacing: 20) {
             if let inputFormat = selectedInputFormat {
                 InputFormatPill(format: inputFormat)
                 
@@ -26,7 +25,6 @@ struct FormatSelectorView: View {
                 showError: showError,
                 errorMessage: errorMessage
             )
-            Spacer(minLength: 0)
         }
         .onChange(of: selectedOutputFormat) { oldValue, newValue in
             validateFormatCompatibility(input: selectedInputFormat, output: newValue)
@@ -98,26 +96,50 @@ struct OutputFormatSelector: View {
                 }
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: getFormatIcon(for: selectedOutputFormat))
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.accentColor)
-                    Text(selectedOutputFormat.localizedDescription ?? "Select Format")
-                        .font(.system(size: 14, weight: .medium))
+                    // Selected Format Icon
+                    ZStack {
+                        Circle()
+                            .fill(Color.accentColor.opacity(0.15))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: getFormatIcon(for: selectedOutputFormat))
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.accentColor, .accentColor.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Convert to")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Text(selectedOutputFormat.localizedDescription ?? "Select Format")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    
                     Spacer()
+                    
                     Image(systemName: "chevron.down")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.secondary)
                         .rotationEffect(.degrees(isMenuOpen ? 180 : 0))
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(
-                    Capsule(style: .continuous)
-                        .fill(selectorBackground)
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(selectorBorder, lineWidth: 1)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(colorScheme == .dark ? 
+                                Color.black.opacity(0.3) : 
+                                Color.white.opacity(0.8))
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.accentColor.opacity(isHovered ? 0.2 : 0.1), 
+                                   lineWidth: 1)
+                    }
                 )
             }
             .buttonStyle(.plain)
@@ -277,29 +299,23 @@ struct ContentView: View {
                 .ignoresSafeArea()
             
             HStack(alignment: .top, spacing: 24) {
-            SourcePanel(
-                processor: processor,
-                isDragging: $isDragging,
-                showError: $showError,
-                errorMessage: $errorMessage,
-                selectedFormat: selectedOutputFormat,
-                onFilesSelected: { urls in
-                    Task { await handleSelectedFiles(urls) }
-                },
-                onClearAll: clearAllFiles
-            )
-
-            ConversionActionColumn(
-                isProcessing: processor.isProcessing,
-                onConvert: presentFileImporter,
-                onShowFormats: { isFormatSelectorPresented.toggle() }
-            )
-
-            VStack(alignment: .leading, spacing: 20) {
-                FormatSelectorView(
-                    selectedInputFormat: nil,
-                    selectedOutputFormat: $selectedOutputFormat,
-                    supportedTypes: supportedFormats(for: "output")
+                SourcePanel(
+                    processor: processor,
+                    isDragging: $isDragging,
+                    showError: $showError,
+                    errorMessage: $errorMessage,
+                    selectedFormat: selectedOutputFormat,
+                    onFilesSelected: { urls in
+                        Task { await handleSelectedFiles(urls) }
+                    },
+                    onClearAll: clearAllFiles
+                )
+                
+                VStack(alignment: .leading, spacing: 20) {
+                    FormatSelectorView(
+                        selectedInputFormat: nil,
+                        selectedOutputFormat: $selectedOutputFormat,
+                        supportedTypes: supportedFormats(for: "output")
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     
@@ -535,26 +551,7 @@ struct ContentView: View {
             }
         }
     }
-
-    private func presentFileImporter() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.canChooseDirectories = false
-        panel.canCreateDirectories = false
-        panel.canChooseFiles = true
-        let allowed = Array(Set(supportedFormats(for: "input").values.flatMap { $0 }))
-        panel.allowedContentTypes = allowed.isEmpty ? [.item] : allowed
-
-        Task { @MainActor in
-            guard let window = NSApp.windows.first else { return }
-            let response = await panel.beginSheetModal(for: window)
-
-            if response == .OK {
-                await handleSelectedFiles(panel.urls)
-            }
-        }
-    }
-
+    
     private func handleFilesSelected(_ providers: [NSItemProvider]) {
         Task {
             do {
@@ -569,24 +566,6 @@ struct ContentView: View {
                     }
                 }
             }
-        }
-    }
-
-    private var selectorBackground: Color {
-        if colorScheme == .dark {
-            let hoverBoost = isHovered ? 0.12 : 0.08
-            return Color.white.opacity(hoverBoost)
-        } else {
-            let hoverBoost = isHovered ? 0.98 : 0.94
-            return Color.white.opacity(hoverBoost)
-        }
-    }
-
-    private var selectorBorder: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(isHovered ? 0.24 : 0.16)
-        } else {
-            return Color.black.opacity(isHovered ? 0.10 : 0.06)
         }
     }
 }
@@ -622,15 +601,14 @@ struct SourcePanel: View {
             .frame(maxWidth: .infinity, minHeight: 220)
             
             if files.isEmpty {
-                VStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("No files added yet")
                         .font(.system(size: 14, weight: .medium))
                     Text("Drag and drop files above or click to browse.")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 HStack {
                     Text("Selected (\(files.count))")
@@ -670,45 +648,14 @@ struct SourcePanel: View {
 }
 
 private struct DualPaneCardModifier: ViewModifier {
-    @Environment(\.colorScheme) private var colorScheme
-
     func body(content: Content) -> some View {
         content
-            .padding(18)
+            .padding(20)
             .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(cardBackground)
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.45))
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(borderColor, lineWidth: 1)
-            )
-            .shadow(color: shadowColor, radius: 16, x: 0, y: 12)
-    }
-
-    private var cardBackground: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.08)
-        } else {
-            return Color.white.opacity(0.96)
-        }
-    }
-
-    private var borderColor: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.12)
-        } else {
-            return Color.black.opacity(0.06)
-        }
-    }
-
-    private var shadowColor: Color {
-        if colorScheme == .dark {
-            return Color.black.opacity(0.45)
-        } else {
-            return Color.black.opacity(0.08)
-        }
     }
 }
 
@@ -781,85 +728,6 @@ struct SourceFileRow: View {
     }
 }
 
-private struct ConversionActionColumn: View {
-    let isProcessing: Bool
-    let onConvert: () -> Void
-    let onShowFormats: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Button(action: onConvert) {
-                HStack(spacing: 10) {
-                    Text(isProcessing ? "Processing..." : "Convert")
-                        .font(.system(size: 15, weight: .semibold))
-                    if !isProcessing {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                }
-                .padding(.horizontal, 26)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(primaryGradient)
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(primaryBorder, lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(isProcessing)
-            .opacity(isProcessing ? 0.7 : 1)
-
-            Text(isProcessing ? "Hang tight while we process." : "Quickly convert using the current settings.")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-
-            Button(action: onShowFormats) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(secondaryBackground)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(secondaryBorder, lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(width: 150)
-        .padding(.top, 32)
-    }
-
-    private var primaryGradient: LinearGradient {
-        if isProcessing {
-            return LinearGradient(colors: [Color.accentColor.opacity(0.5), Color.accentColor.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-        return LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
-    private var primaryBorder: Color {
-        colorScheme == .dark ? Color.white.opacity(0.2) : Color.black.opacity(0.08)
-    }
-
-    private var secondaryBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.92)
-    }
-
-    private var secondaryBorder: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.05)
-    }
-}
-
 private extension FileProcessingState {
     var fileTypeText: String {
         url.pathExtension.isEmpty ? "" : url.pathExtension.uppercased()
@@ -899,8 +767,7 @@ struct SmartCompressControls: View {
     @Binding var isOn: Bool
     @Binding var codec: ConversionSettings.SmartCompressionCodec
     var isEnabled: Bool
-    @Environment(\.colorScheme) private var colorScheme
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle(isOn: $isOn) {
@@ -929,33 +796,17 @@ struct SmartCompressControls: View {
                 }
             }
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(cardFill)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.6))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(cardBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         )
         .opacity(isEnabled ? 1 : 0.4)
-    }
-
-    private var cardFill: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.05)
-        } else {
-            return Color.white.opacity(0.9)
-        }
-    }
-
-    private var cardBorder: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.12)
-        } else {
-            return Color.black.opacity(0.05)
-        }
     }
 }
 func getFormatIcon(for format: UTType) -> String {
