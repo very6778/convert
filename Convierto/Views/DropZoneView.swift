@@ -16,6 +16,7 @@ struct DropZoneView: View {
     let onFilesSelected: ([URL]) -> Void
 
     private let dropDelegate: FileDropDelegate
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         isDragging: Binding<Bool>,
@@ -73,9 +74,13 @@ struct DropZoneView: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color(NSColor.windowBackgroundColor))
-                .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 6)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.88))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.05), lineWidth: 1)
+                )
+                .shadow(color: colorScheme == .dark ? Color.black.opacity(0.45) : Color.black.opacity(0.08), radius: 26, x: 0, y: 18)
 
             DropZoneContent(
                 isDragging: isDragging,
@@ -136,23 +141,36 @@ private struct DropZoneContent: View {
     let onStartOver: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            HStack(alignment: .center, spacing: 24) {
+        VStack(spacing: 28) {
+            HStack(alignment: .top, spacing: 28) {
                 dragAndDropColumn
 
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     Button(action: onSelectFiles) {
-                        Text("Convert →")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                        HStack(spacing: 10) {
+                            Text("Convert")
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 22)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(hasFiles ? Color.accentColor : Color.accentColor.opacity(0.35))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.white.opacity(hasFiles ? 0.28 : 0.16), lineWidth: 1)
+                        )
+                        .foregroundStyle(Color.white)
+                        .shadow(color: Color.accentColor.opacity(hasFiles ? 0.35 : 0.12), radius: 14, x: 0, y: 10)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(.plain)
                     .disabled(!hasFiles)
-                    .opacity(hasFiles ? 1 : 0.5)
+                    .opacity(hasFiles ? 1 : 0.6)
 
-                    Text(hasFiles ? "Ready when you are" : "Add files to get started")
+                    Text(hasFiles ? "Files ready to convert" : "Add files to get started")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -199,12 +217,12 @@ private struct DropZoneContent: View {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(showError ? Color.red.opacity(0.1) : Color.accentColor.opacity(0.1))
-                        .frame(width: 56, height: 56)
+                        .fill(showError ? Color.red.opacity(0.12) : Color.accentColor.opacity(0.12))
+                        .frame(width: 48, height: 48)
 
                     Image(systemName: showError ? "exclamationmark.circle.fill" :
                             isDragging ? "arrow.down.circle.fill" : "square.and.arrow.up.circle.fill")
-                        .font(.system(size: 28, weight: .medium))
+                        .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: showError ? [.red, .red.opacity(0.8)] :
@@ -218,8 +236,8 @@ private struct DropZoneContent: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(showError ? (errorMessage ?? "Error") :
-                            isDragging ? "Release to Convert" : "Drag & drop files here")
-                        .font(.system(size: 16, weight: .semibold))
+                            isDragging ? "Release to convert" : "Drag & drop files here")
+                        .font(.system(size: 15, weight: .medium))
 
                     if showError {
                         Text("Try dropping the file again or choose another")
@@ -227,7 +245,7 @@ private struct DropZoneContent: View {
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     } else if !isDragging {
-                        Text("We’ll automatically convert supported files for you")
+                        Text("Supported files convert automatically once they land here")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
@@ -250,7 +268,7 @@ private struct DropZoneContent: View {
                 }
             }
         }
-        .padding(24)
+        .padding(22)
         .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20)
@@ -267,35 +285,38 @@ private struct DropZoneContent: View {
     }
 
     private var selectionColumn: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Prefer manual selection?")
                 .font(.system(size: 15, weight: .semibold))
 
             Button(action: onSelectFiles) {
-                Text("Select…")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 6) {
+                    Text("Select…")
+                    Image(systemName: "folder")
+                }
+                .font(.system(size: 14, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.secondary.opacity(0.12))
+                )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Label("Browse your library", systemImage: "folder")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Label("Supports images, video, audio & PDF", systemImage: "doc.richtext")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+            Text("Browse your library for images, videos, audio or PDFs.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(24)
+        .padding(22)
         .frame(width: 220, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.secondary.opacity(0.06))
+                .fill(Color.secondary.opacity(0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
                 )
         )
     }

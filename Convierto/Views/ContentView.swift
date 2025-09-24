@@ -403,7 +403,7 @@ struct ContentView: View {
 
                     Spacer()
                 }
-                .dualPaneCard()
+                .infoPaneCard()
                 .frame(maxWidth: .infinity)
             }
             .padding(24)
@@ -643,26 +643,81 @@ struct SourcePanel: View {
                 .frame(maxHeight: 260)
             }
         }
-        .dualPaneCard()
+        .primaryPaneCard()
         .frame(maxWidth: .infinity)
     }
 }
 
-private struct DualPaneCardModifier: ViewModifier {
+private struct PrimaryPaneCardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     func body(content: Content) -> some View {
         content
-            .padding(20)
+            .padding(24)
             .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.45))
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(cardFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(cardStroke, lineWidth: 1)
+                    )
+                    .shadow(color: shadowColor, radius: 22, x: 0, y: 18)
             )
+    }
+
+    private var cardFill: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.06)
+        }
+        return Color(NSColor.windowBackgroundColor).opacity(0.95)
+    }
+
+    private var cardStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04)
+    }
+
+    private var shadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.5) : Color.black.opacity(0.08)
+    }
+}
+
+private struct InfoPaneCardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            .padding(22)
+            .frame(minWidth: 320, maxWidth: .infinity, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(cardFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(cardStroke, lineWidth: 1)
+                    )
+            )
+    }
+
+    private var cardFill: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.04)
+        }
+        return Color.white.opacity(0.75)
+    }
+
+    private var cardStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03)
     }
 }
 
 private extension View {
-    func dualPaneCard() -> some View {
-        modifier(DualPaneCardModifier())
+    func primaryPaneCard() -> some View {
+        modifier(PrimaryPaneCardModifier())
+    }
+
+    func infoPaneCard() -> some View {
+        modifier(InfoPaneCardModifier())
     }
 }
 
